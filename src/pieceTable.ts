@@ -35,7 +35,32 @@ export class Storage {
         this.pieceHead = new Piece(Content.length, 0, Source.ORIGINAL, null);
     }
 
-    read() { }
+    read() {
+
+        let head: Piece | null = this.pieceHead;
+        let line: string = "";
+        const lines: string[] = [];
+
+        while (head !== null) {
+            const source = head.Source == Source.ORIGINAL ? this.Original : this.New;
+            const text = source.slice(head.Offset, head.Offset + head.Length);
+
+            for (let char of text) {
+                if (char == "\n") {
+                    lines.push(line + "\n");
+                    line = "";
+                    continue;
+                }
+                line += char;
+            }
+
+            head = head.Next;
+        }
+
+        if (line !== "") lines.push(line);
+        return lines;
+    }
+
     insert(content: string, at: Position) { }
     delete(at: Position) { }
     deleteRange(start: Position, end: Position) { }
