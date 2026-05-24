@@ -137,7 +137,38 @@ export class Storage {
 
     }
 
-    deleteRange(start: Position, end: Position) { }
+    deleteRange(start: Position, end: Position) {
+
+        const { previous: StartPrevious, piece: StartPiece, offset: StartOffset } = this.findPieceByPosition(start);
+        const { previous: EndPrevious, piece: EndPiece, offset: EndOffset } = this.findPieceByPosition(end);
+
+        if (!StartPiece || !EndPiece) return;
+
+        if (StartPiece === EndPiece) {
+
+            if (StartOffset === 0) {
+                EndPiece.Offset += EndOffset;
+                EndPiece.Length -= EndOffset;
+                return;
+            }
+
+        }
+
+        StartPiece.Length = StartOffset;
+        EndPiece.Offset += EndOffset;
+        EndPiece.Length -= EndOffset;
+
+        let piece = StartPiece.Next;
+
+        while (piece !== EndPiece && piece != null) {
+            StartPiece.Next = piece.Next;
+            piece = piece.Next;
+        }
+
+        if (StartPiece.Length === 0) this.removePiece(StartPiece);
+        if (EndPiece.Length === 0) this.removePiece(EndPiece);
+
+    }
 
 
     private removeLastCharacterOfPiece(piece: Piece) {
