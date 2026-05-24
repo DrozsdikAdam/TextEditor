@@ -61,7 +61,40 @@ export class Storage {
         return lines;
     }
 
-    insert(content: string, at: Position) { }
+    insert(content: string, at: Position) {
+
+        const { piece, previous, offset } = this.findPieceByPosition(at);
+
+        if (!piece) {
+            if (this.pieceHead === null) {
+                this.New += content;
+                this.pieceHead = new Piece(content.length, 0, Source.ADD, null);
+                return;
+            }
+            return;
+        }
+
+        const nextPiece = new Piece(
+            piece.Offset + offset,
+            piece.Length - offset,
+            piece.Source,
+            piece.Next
+        );
+
+        const currentPiece = new Piece(
+            this.New.length,
+            content.length,
+            Source.ADD,
+            nextPiece
+        );
+
+        this.New += content;
+        piece.Length = offset;
+
+        if (previous && piece.Length === 0) previous.Next = currentPiece;
+        else if (piece.Length === 0) this.pieceHead = currentPiece;
+        else piece.Next = currentPiece;
+    }
 
     delete(at: Position) {
 
