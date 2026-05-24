@@ -42,7 +42,7 @@ export class Storage {
         const lines: string[] = [];
 
         while (head !== null) {
-            const source = head.Source == Source.ORIGINAL ? this.Original : this.New;
+            const source = head.Source === Source.ORIGINAL ? this.Original : this.New;
             const text = source.slice(head.Offset, head.Offset + head.Length);
 
             for (let char of text) {
@@ -62,6 +62,113 @@ export class Storage {
     }
 
     insert(content: string, at: Position) { }
-    delete(at: Position) { }
+
+    delete(at: Position) {
+
+        const { offset, piece, previous } = this.findPieceByPosition(at);
+        if (piece === null) return;
+
+        if (offset === 0 && previous) {
+            this.removeLastCharacterOfPiece(previous);
+            return;
+        }
+        else if (offset == 0) {
+            return;
+        }
+
+        if (piece.Length === 1 && offset === 1) {
+            this.removePiece(piece);
+            return;
+        }
+
+        if (offset === 1 && piece.Length > 0) {
+            piece.Length--;
+            piece.Offset++;
+            return;
+        }
+
+        if (offset === piece.Length - 1) {
+            piece.Length--;
+            return;
+        }
+
+        const newPiece = new Piece(
+            piece.Length - offset,
+            piece.Offset + offset,
+            piece.Source,
+            piece.Next
+        );
+
+        piece.Next = newPiece;
+        piece.Length = offset - 1;
+
+    }
+
     deleteRange(start: Position, end: Position) { }
+
+
+    private removeLastCharacterOfPiece(piece: Piece) {
+        piece.Length--;
+
+        if (piece.Length === 0) {
+            this.removePiece(piece);
+        }
+    }
+
+    private removePiece(piece: Piece) {
+        let head = this.pieceHead;
+        let previous = null;
+
+        while (head != null) {
+            if (head === piece) {
+                if (previous) {
+                    previous.Next = piece.Next;
+                } else {
+                    this.pieceHead = piece.Next;
+                }
+                return;
+            }
+            previous = head;
+            head = head.Next;
+        }
+    }
+
+    private findPieceByPosition(at: Position): { offset: number, piece: Piece | null, previous: Piece | null } {
+        const { line, column } = at;
+        let head: Piece | null = this.pieceHead;
+        let currentLine = 0;
+        let currentChar = 0;
+        let previous: Piece | null = null;
+
+        while (head !== null) {
+            const source = head.Source === Source.ORIGINAL ? this.Original : this.New;
+            const text = source.slice(head.Offset, head.Offset + head.Length);
+
+            for (let i = 0; i < text.length; i++) {
+                const letter = text[i];
+
+                if (currentLine === line && currentChar === column) {
+                    return { offset: head.Offset + i, piece: head, previous: previous }
+                }
+
+                if (letter === "\n") {
+                    currentLine++;
+                    currentChar = 0;
+                } else {
+                    currentChar++;
+                }
+            }
+
+            if (head.Next === null) {
+                return { offset: head.Length, piece: head, previous }
+            }
+
+            previous = head;
+            head = head.Next;
+
+        }
+
+        return { offset: 0, piece: null, previous: null }
+    }
+
 }
