@@ -16,8 +16,8 @@ class Piece {
     Source: Source;
     Next: Piece | null;
 
-    constructor(Lenght: number, Offset: number, Source: Source, Next: Piece | null) {
-        this.Length = Lenght;
+    constructor(Length: number, Offset: number, Source: Source, Next: Piece | null) {
+        this.Length = Length;
         this.Offset = Offset;
         this.Source = Source;
         this.Next = Next;
@@ -36,7 +36,6 @@ export class Storage {
     }
 
     read() {
-
         let head: Piece | null = this.pieceHead;
         let line: string = "";
         const lines: string[] = [];
@@ -62,65 +61,71 @@ export class Storage {
     }
 
     insert(content: string, at: Position) {
-
         const { piece, previous, offset } = this.findPieceByPosition(at);
 
         if (!piece) {
             if (this.pieceHead === null) {
-                this.New += content;
                 this.pieceHead = new Piece(content.length, 0, Source.ADD, null);
+                this.New += content;
                 return;
             }
             return;
         }
 
-        const nextPiece = new Piece(
-            piece.Offset + offset,
-            piece.Length - offset,
-            piece.Source,
-            piece.Next
-        );
-
         const currentPiece = new Piece(
-            this.New.length,
             content.length,
+            this.New.length,
             Source.ADD,
-            nextPiece
+            null
         );
 
         this.New += content;
-        piece.Length = offset;
 
-        if (previous && piece.Length === 0) previous.Next = currentPiece;
-        else if (piece.Length === 0) this.pieceHead = currentPiece;
-        else piece.Next = currentPiece;
+        if (offset === 0) {
+            currentPiece.Next = piece;
+            if (previous) {
+                previous.Next = currentPiece;
+            } else {
+                this.pieceHead = currentPiece;
+            }
+        } else if (offset === piece.Length) {
+            currentPiece.Next = piece.Next;
+            piece.Next = currentPiece;
+        } else {
+            const nextPiece = new Piece(
+                piece.Length - offset,
+                piece.Offset + offset,
+                piece.Source,
+                piece.Next
+            );
+            currentPiece.Next = nextPiece;
+            piece.Length = offset;
+            piece.Next = currentPiece;
+        }
     }
 
     delete(at: Position) {
-
         const { offset, piece, previous } = this.findPieceByPosition(at);
         if (piece === null) return;
 
         if (offset === 0 && previous) {
             this.removeLastCharacterOfPiece(previous);
             return;
-        }
-        else if (offset == 0) {
+        } else if (offset === 0) {
             return;
         }
 
-        if (piece.Length === 1 && offset === 1) {
-            this.removePiece(piece);
+        if (offset === 1) {
+            if (piece.Length === 1) {
+                this.removePiece(piece);
+            } else {
+                piece.Length--;
+                piece.Offset++;
+            }
             return;
         }
 
-        if (offset === 1 && piece.Length > 0) {
-            piece.Length--;
-            piece.Offset++;
-            return;
-        }
-
-        if (offset === piece.Length - 1) {
+        if (offset === piece.Length) {
             piece.Length--;
             return;
         }
@@ -132,44 +137,52 @@ export class Storage {
             piece.Next
         );
 
-        piece.Next = newPiece;
         piece.Length = offset - 1;
-
+        piece.Next = newPiece;
     }
 
     deleteRange(start: Position, end: Position) {
+        const { piece: startPiece, offset: startOffset } = this.findPieceByPosition(start);
+        const { piece: endPiece, offset: endOffset } = this.findPieceByPosition(end);
 
-        const { previous: StartPrevious, piece: StartPiece, offset: StartOffset } = this.findPieceByPosition(start);
-        const { previous: EndPrevious, piece: EndPiece, offset: EndOffset } = this.findPieceByPosition(end);
+        if (!startPiece || !endPiece) return;
 
-        if (!StartPiece || !EndPiece) return;
-
-        if (StartPiece === EndPiece) {
-
-            if (StartOffset === 0) {
-                EndPiece.Offset += EndOffset;
-                EndPiece.Length -= EndOffset;
-                return;
+        if (startPiece === endPiece) {
+            if (startOffset === 0) {
+                startPiece.Offset += endOffset;
+                startPiece.Length -= endOffset;
+            } else {
+                const newPiece = new Piece(
+                    startPiece.Length - endOffset,
+                    startPiece.Offset + endOffset,
+                    startPiece.Source,
+                    startPiece.Next
+                );
+                startPiece.Length = startOffset;
+                startPiece.Next = newPiece;
+                if (newPiece.Length === 0) {
+                    this.removePiece(newPiece);
+                }
             }
-
+            if (startPiece.Length === 0) {
+                this.removePiece(startPiece);
+            }
+            return;
         }
 
-        StartPiece.Length = StartOffset;
-        EndPiece.Offset += EndOffset;
-        EndPiece.Length -= EndOffset;
+        startPiece.Length = startOffset;
+        endPiece.Offset += endOffset;
+        endPiece.Length -= endOffset;
 
-        let piece = StartPiece.Next;
-
-        while (piece !== EndPiece && piece != null) {
-            StartPiece.Next = piece.Next;
+        let piece = startPiece.Next;
+        while (piece !== endPiece && piece !== null) {
+            startPiece.Next = piece.Next;
             piece = piece.Next;
         }
 
-        if (StartPiece.Length === 0) this.removePiece(StartPiece);
-        if (EndPiece.Length === 0) this.removePiece(EndPiece);
-
+        if (startPiece.Length === 0) this.removePiece(startPiece);
+        if (endPiece.Length === 0) this.removePiece(endPiece);
     }
-
 
     private removeLastCharacterOfPiece(piece: Piece) {
         piece.Length--;
@@ -212,7 +225,7 @@ export class Storage {
                 const letter = text[i];
 
                 if (currentLine === line && currentChar === column) {
-                    return { offset: head.Offset + i, piece: head, previous: previous }
+                    return { offset: i, piece: head, previous: previous }
                 }
 
                 if (letter === "\n") {
@@ -229,10 +242,8 @@ export class Storage {
 
             previous = head;
             head = head.Next;
-
         }
 
         return { offset: 0, piece: null, previous: null }
     }
-
 }
