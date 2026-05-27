@@ -1,4 +1,4 @@
-import { Source } from "../enums/Source";
+import { Source } from "../enums/source";
 
 export class Piece {
     Length: number;

@@ -1,5 +1,5 @@
-import { Source } from "../enums/Source";
-import type { Position } from "../types/Position";
+import { Source } from "../enums/source";
+import type { Position } from "../types/position";
 import { Piece } from "./piece";
 
 interface FindPieceResult {
